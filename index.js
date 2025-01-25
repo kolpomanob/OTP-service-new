@@ -31,6 +31,7 @@ app.get('/', (req, res) => {
 
 // Endpoint to fetch all OTP data
 app.get('/fetch-otp-data', (req, res) => {
+    res.setHeader('Cache-Control', 'no-store'); // Disable caching
     res.json(otpData);
 });
 
