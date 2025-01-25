@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Phone and OTP Viewer</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 400px;
+            margin: auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .otp-item {
+            border: 1px solid #ccc;
+            background: #f9f9f9;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+    </style>
+</head>
+<body>
+    <h2>Received Phone and OTPs</h2>
+    <div id="otp-container" class="container">
+        <p>Loading OTP data...</p>
+    </div>
+
+    <script>
+        // Function to fetch OTP data
+        async function fetchOtpData() {
+            try {
+                const response = await fetch('/fetch-otp-data');
+                const data = await response.json();
+
+                // Populate the container
+                const container = document.getElementById('otp-container');
+                container.innerHTML = ''; // Clear previous data
+
+                data.forEach(item => {
+                    const otpItem = document.createElement('div');
+                    otpItem.classList.add('otp-item');
+                    otpItem.innerHTML = `
+                        <strong>Phone:</strong> ${item.phone}<br>
+                        <strong>OTP:</strong> ${item.otp}
+                    `;
+                    container.appendChild(otpItem);
+                });
+            } catch (error) {
+                console.error('Error fetching OTP data:', error);
+            }
+        }
+
+        // Fetch OTP data every 5 seconds
+        setInterval(fetchOtpData, 5000);
+        fetchOtpData(); // Initial call
+    </script>
+</body>
+</html>
+
