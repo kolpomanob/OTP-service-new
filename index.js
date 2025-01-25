@@ -1,15 +1,21 @@
 const express = require('express');
 const { Pool } = require('pg');
 const path = require('path');
+const cors = require('cors');
 const { WebSocketServer } = require('ws'); // Import WebSocket library
 
 const app = express();
+
+// Enable CORS
+app.use(cors());
+
+// Connect to PostgreSQL
 const pool = new Pool({
     connectionString: process.env.DATABASE_URL,
     ssl: { rejectUnauthorized: false },
 });
 
-// Array to store connected WebSocket clients
+// Store WebSocket clients
 const clients = [];
 
 // WebSocket server setup
@@ -18,6 +24,7 @@ wss.on('connection', (ws) => {
     console.log('New WebSocket connection');
     clients.push(ws);
 
+    // Handle WebSocket disconnection
     ws.on('close', () => {
         console.log('WebSocket connection closed');
         const index = clients.indexOf(ws);
@@ -25,6 +32,14 @@ wss.on('connection', (ws) => {
             clients.splice(index, 1);
         }
     });
+
+    // Handle WebSocket errors
+    ws.on('error', (error) => {
+        console.error('WebSocket error:', error);
+    });
+
+    // Send welcome message
+    ws.send(JSON.stringify({ message: 'Welcome to the WebSocket server' }));
 });
 
 // Serve static HTML from 'public' folder
