@@ -24,7 +24,7 @@
     <div id="otp-container"></div>
 
     <script>
-        const ws = new WebSocket('wss://otp-service-production.up.railway.app');
+        const ws = new WebSocket('ws://otp-service-production.up.railway.app');
 
         ws.onopen = () => {
             console.log('WebSocket connected');
