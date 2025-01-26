@@ -3,63 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Received Phone and OTPs</title>
+    <title>Real-Time OTP Viewer</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             padding: 20px;
-            background-color: #f4f4f4;
         }
-        .otp-container {
-            max-width: 600px;
-            margin: auto;
-            background: #fff;
-            padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
-        }
-        .otp-entry {
+        #otp-container div {
+            border: 1px solid #ccc;
             padding: 10px;
-            margin-bottom: 10px;
-            border-bottom: 1px solid #ddd;
+            margin: 5px 0;
+            border-radius: 5px;
+            background-color: #f9f9f9;
         }
     </style>
 </head>
 <body>
-    <h2>Received Phone and OTPs</h2>
-    <div class="otp-container"></div>
+    <h1>Real-Time OTP Viewer</h1>
+    <!-- Container where OTP data will appear -->
+    <div id="otp-container"></div>
 
     <script>
-        const connectWebSocket = () => {
-            const ws = new WebSocket('wss://otp-service-production.up.railway.app');
+        const ws = new WebSocket('wss://otp-service-production.up.railway.app');
 
-            ws.onopen = () => {
-                console.log('WebSocket connection established');
-            };
-
-            ws.onmessage = (event) => {
-                console.log('Received message:', event.data);
-                const data = JSON.parse(event.data);
-                const container = document.querySelector('.otp-container');
-
-                // Add new OTP data dynamically
-                const div = document.createElement('div');
-                div.className = 'otp-entry';
-                div.innerHTML = `<strong>Phone:</strong> ${data.phone}, <strong>OTP:</strong> ${data.otp}`;
-                container.prepend(div); // Add the new entry at the top
-            };
-
-            ws.onclose = () => {
-                console.log('WebSocket connection closed, reconnecting...');
-                setTimeout(connectWebSocket, 1000); // Attempt reconnection after 1 second
-            };
-
-            ws.onerror = (error) => {
-                console.error('WebSocket error:', error);
-            };
+        ws.onopen = () => {
+            console.log('WebSocket connected');
         };
 
-        connectWebSocket(); // Initialize WebSocket connection
+        ws.onmessage = (event) => {
+            const data = JSON.parse(event.data);
+
+            // Check if the data is an array (initial load) or a single OTP
+            if (Array.isArray(data)) {
+                data.forEach(addOtpToPage);
+            } else {
+                addOtpToPage(data);
+            }
+        };
+
+        ws.onclose = () => {
+            console.log('WebSocket connection closed');
+        };
+
+        function addOtpToPage({ phone, otp }) {
+            const container = document.getElementById('otp-container');
+            const otpBox = document.createElement('div');
+            otpBox.textContent = `Phone: ${phone}, OTP: ${otp}`;
+            container.appendChild(otpBox);
+        }
     </script>
 </body>
 </html>

