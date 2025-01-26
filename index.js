@@ -22,13 +22,13 @@ wss.on('connection', (ws) => {
     });
 });
 
-// Handle requests for a specific phone number or OTP submission
+// Handle OTP submission or fetching
 app.get('/', (req, res) => {
     const phone = req.query.phone;
     const otp = req.query.otp;
 
-    // If both phone and OTP are provided, save the OTP
     if (phone && otp) {
+        // Save OTP in memory
         otpData[phone] = otp;
 
         // Notify all WebSocket clients
@@ -41,11 +41,14 @@ app.get('/', (req, res) => {
         });
     }
 
-    // If only the phone is provided, return the latest OTP for that phone
-    if (phone) {
+    if (phone && !otp) {
+        // Fetch the latest OTP for the given phone number
         const latestOtp = otpData[phone];
         if (latestOtp) {
-            return res.redirect(`/?phone=${phone}&otp=${latestOtp}`);
+            return res.status(200).json({
+                phone,
+                otp: latestOtp,
+            });
         } else {
             return res.status(404).json({
                 message: `No OTP found for phone ${phone}`,
@@ -54,17 +57,18 @@ app.get('/', (req, res) => {
         }
     }
 
-    // If neither phone nor OTP is provided, return an error
-    return res.status(400).json({
-        message: 'Phone number is required',
-        status: 'error',
-    });
+    // Serve frontend if no query parameters are provided
+    if (!phone && !otp) {
+        res.sendFile(__dirname + '/public/index.html');
+    } else {
+        res.status(400).json({
+            message: 'Invalid request. Please provide phone and/or OTP.',
+            status: 'error',
+        });
+    }
 });
 
-// Serve frontend
-app.use(express.static('public'));
-
-// Fetch all OTP data
+// Fetch all OTP data for debugging purposes
 app.get('/fetch-otp-data', (req, res) => {
     res.json(otpData);
 });
