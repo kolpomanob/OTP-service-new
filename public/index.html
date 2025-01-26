@@ -20,7 +20,7 @@
 </head>
 <body>
     <h1>Real-Time OTP Viewer</h1>
-    <!-- Container where OTP data will appear -->
+    <!-- Container for dynamically displayed OTPs -->
     <div id="otp-container"></div>
 
     <script>
@@ -33,11 +33,9 @@
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
 
-            // Check if the data is an array (initial load) or a single OTP
-            if (Array.isArray(data)) {
-                data.forEach(addOtpToPage);
-            } else {
-                addOtpToPage(data);
+            // Update page dynamically
+            for (const [phone, otp] of Object.entries(data)) {
+                addOtpToPage({ phone, otp });
             }
         };
 
