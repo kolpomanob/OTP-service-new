@@ -3,28 +3,35 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-Time OTP Viewer</title>
+    <title>OTP Viewer</title>
     <style>
         body {
             font-family: Arial, sans-serif;
             padding: 20px;
+            background-color: #f4f4f4;
         }
-        #otp-container div {
-            border: 1px solid #ccc;
-            padding: 10px;
-            margin: 5px 0;
+        #otp-container {
+            max-width: 600px;
+            margin: auto;
+            padding: 20px;
+            background: #fff;
             border-radius: 5px;
-            background-color: #f9f9f9;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .otp-box {
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #e9ecef;
+            border-radius: 3px;
         }
     </style>
 </head>
 <body>
     <h1>Real-Time OTP Viewer</h1>
-    <!-- Container for dynamically displayed OTPs -->
     <div id="otp-container"></div>
 
     <script>
-        const ws = new WebSocket('wss://otp-service-production.up.railway.app');
+        const ws = new WebSocket('wss://otp-service-production.up.railway.app'); // WebSocket connection
 
         ws.onopen = () => {
             console.log('WebSocket connected');
@@ -33,9 +40,11 @@
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
 
-            // Update page dynamically
-            for (const [phone, otp] of Object.entries(data)) {
-                addOtpToPage({ phone, otp });
+            // Check if it's a batch of OTPs or a single OTP
+            if (Array.isArray(data)) {
+                data.forEach(addOtpToPage);
+            } else {
+                addOtpToPage(data);
             }
         };
 
@@ -46,6 +55,7 @@
         function addOtpToPage({ phone, otp }) {
             const container = document.getElementById('otp-container');
             const otpBox = document.createElement('div');
+            otpBox.className = 'otp-box';
             otpBox.textContent = `Phone: ${phone}, OTP: ${otp}`;
             container.appendChild(otpBox);
         }
