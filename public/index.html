@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-Time OTP Dashboard</title>
+    <title>OTP Monitoring Dashboard</title>
     <style>
         :root {
             --primary: #4361ee;
@@ -46,6 +46,42 @@
             font-size: 1.1rem;
         }
         
+        .controls {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .filter-input {
+            flex: 1;
+            min-width: 250px;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            font-size: 1rem;
+        }
+        
+        .filter-button {
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        
+        .filter-button:hover {
+            background-color: var(--secondary);
+        }
+        
+        .filter-button:disabled {
+            background-color: var(--gray);
+            cursor: not-allowed;
+        }
+        
         #otp-container {
             background: white;
             border-radius: 10px;
@@ -53,127 +89,26 @@
             overflow: hidden;
         }
         
-        .otp-box {
-            padding: 18px 25px;
-            border-bottom: 1px solid #f0f0f0;
-            transition: all 0.3s ease;
-        }
-        
-        .otp-box:hover {
-            background-color: #f8f9fa;
-        }
-        
-        .otp-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-        }
-        
-        .phone-number {
-            font-weight: 600;
-            color: var(--primary);
-            font-size: 1.1rem;
-        }
-        
-        .timestamp {
-            color: var(--gray);
-            font-size: 0.85rem;
-            background: #f8f9fa;
-            padding: 4px 8px;
-            border-radius: 12px;
-        }
-        
-        .otp-content {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-        
-        .otp-code {
-            font-size: 1.4rem;
-            font-weight: 700;
-            color: var(--danger);
-            letter-spacing: 2px;
-        }
-        
-        .purpose-badge {
-            padding: 4px 12px;
-            border-radius: 16px;
-            font-size: 0.8rem;
-            font-weight: 500;
-            text-transform: uppercase;
-            background-color: var(--success);
-            color: white;
-        }
-        
-        /* Different colors for different purposes */
-        .purpose-login { background-color: #4cc9f0; }
-        .purpose-signup { background-color: #4895ef; }
-        .purpose-verification { background-color: #4361ee; }
-        .purpose-reset { background-color: #3f37c9; }
-        .purpose-unknown { background-color: #b5179e; }
-        
-        /* Animation for new entries */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        .new-otp {
-            animation: fadeIn 0.5s ease-out;
-            background-color: rgba(76, 201, 240, 0.05);
-        }
-        
-        /* Status bar */
-        .status-bar {
-            padding: 12px 20px;
-            background-color: var(--primary);
-            color: white;
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.9rem;
-        }
-        
-        .connection-status {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-        
-        .connection-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            background-color: #4ade80;
-        }
-        
-        .disconnected {
-            background-color: var(--danger);
-        }
-        
-        /* Responsive design */
-        @media (max-width: 768px) {
-            .otp-header {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 5px;
-            }
-            
-            .otp-content {
-                flex-direction: column;
-                align-items: flex-start;
-                gap: 8px;
-            }
-        }
+        /* ... (keep all your existing styles) ... */
     </style>
 </head>
 <body>
     <div class="container">
         <header>
             <h1>OTP Monitoring Dashboard</h1>
-            <p class="subtitle">Real-time one-time password tracking</p>
+            <p class="subtitle">Real-time tracking with historical filtering</p>
         </header>
+        
+        <div class="controls">
+            <input 
+                type="text" 
+                class="filter-input" 
+                id="phone-filter" 
+                placeholder="Enter phone number to filter (e.g., 01515619690)"
+            >
+            <button class="filter-button" id="filter-button">Filter OTPs</button>
+            <button class="filter-button" id="clear-filter">Show All</button>
+        </div>
         
         <div id="otp-container">
             <div class="status-bar">
@@ -190,14 +125,22 @@
     <script>
         const ws = new WebSocket('wss://quickotp.up.railway.app');
         let messageCount = 0;
+        let allOtps = []; // Stores all OTPs received
         const connectionDot = document.getElementById('connection-dot');
         const connectionStatus = document.getElementById('connection-status');
         const messageCountElement = document.getElementById('message-count');
+        const filterInput = document.getElementById('phone-filter');
+        const filterButton = document.getElementById('filter-button');
+        const clearFilterButton = document.getElementById('clear-filter');
+        const otpContainer = document.getElementById('otp-container');
 
+        // Initialize
+        fetchAllOtps(); // Load initial data
+
+        // WebSocket handlers
         ws.onopen = () => {
             console.log('WebSocket connected');
-            connectionDot.classList.remove('disconnected');
-            connectionStatus.textContent = 'Connected (Live)';
+            updateConnectionStatus(true);
         };
 
         ws.onmessage = (event) => {
@@ -205,39 +148,89 @@
             messageCount++;
             messageCountElement.textContent = `${messageCount} messages received`;
             
+            // Add to master list
             if (Array.isArray(data)) {
-                data.reverse().forEach(otpData => addOtpToPage(otpData));
+                allOtps.unshift(...data.reverse());
             } else {
-                addOtpToPage(data);
+                allOtps.unshift(data);
             }
+            
+            // Display based on current filter
+            displayOtps(getFilteredOtps());
         };
 
         ws.onclose = () => {
             console.log('WebSocket connection closed');
-            connectionDot.classList.add('disconnected');
-            connectionStatus.textContent = 'Disconnected';
+            updateConnectionStatus(false);
         };
 
         ws.onerror = (error) => {
             console.error('WebSocket error:', error);
-            connectionDot.classList.add('disconnected');
             connectionStatus.textContent = 'Connection Error';
         };
 
-        function addOtpToPage({ phone, otp, purpose = 'unknown', timestamp }) {
-            const container = document.getElementById('otp-container');
+        // Filter button handler
+        filterButton.addEventListener('click', () => {
+            const phoneNumber = filterInput.value.trim();
+            if (phoneNumber) {
+                displayOtps(getFilteredOtps(phoneNumber));
+            }
+        });
+
+        // Clear filter handler
+        clearFilterButton.addEventListener('click', () => {
+            filterInput.value = '';
+            displayOtps(getFilteredOtps());
+        });
+
+        // Fetch all historical OTPs from server
+        async function fetchAllOtps() {
+            try {
+                const response = await fetch('/fetch-otp-data');
+                const data = await response.json();
+                
+                // Convert object to array and add to allOtps
+                Object.entries(data).forEach(([phone, otpData]) => {
+                    allOtps.push({
+                        phone,
+                        otp: otpData.otp,
+                        purpose: otpData.purpose,
+                        timestamp: otpData.timestamp
+                    });
+                });
+                
+                displayOtps(allOtps);
+            } catch (error) {
+                console.error('Error fetching OTP history:', error);
+            }
+        }
+
+        // Filter OTPs by phone number
+        function getFilteredOtps(phoneNumber = '') {
+            if (!phoneNumber) return allOtps;
+            return allOtps.filter(otp => otp.phone.includes(phoneNumber));
+        }
+
+        // Display OTPs in the container
+        function displayOtps(otps) {
+            // Clear existing OTPs (except status bar)
+            while (otpContainer.children.length > 1) {
+                otpContainer.removeChild(otpContainer.lastChild);
+            }
+            
+            // Add filtered OTPs
+            otps.forEach(otp => {
+                const otpBox = createOtpBox(otp);
+                otpContainer.appendChild(otpBox);
+            });
+        }
+
+        // Create OTP box element
+        function createOtpBox({ phone, otp, purpose = 'unknown', timestamp }) {
             const otpBox = document.createElement('div');
-            otpBox.className = 'otp-box new-otp';
+            otpBox.className = 'otp-box';
             
-            // Remove animation class after it completes
-            setTimeout(() => {
-                otpBox.classList.remove('new-otp');
-            }, 500);
-            
-            // Format timestamp
             const formattedTime = timestamp ? new Date(timestamp).toLocaleString() : 'Just now';
-            
-            // Determine purpose class
             const purposeClass = purpose ? `purpose-${purpose.toLowerCase()}` : 'purpose-unknown';
             
             otpBox.innerHTML = `
@@ -251,12 +244,13 @@
                 </div>
             `;
             
-            // Add new OTP at the top (after status bar)
-            if (container.children.length > 1) {
-                container.insertBefore(otpBox, container.children[1]);
-            } else {
-                container.appendChild(otpBox);
-            }
+            return otpBox;
+        }
+
+        // Update connection status UI
+        function updateConnectionStatus(isConnected) {
+            connectionDot.classList.toggle('disconnected', !isConnected);
+            connectionStatus.textContent = isConnected ? 'Connected (Live)' : 'Disconnected';
         }
     </script>
 </body>
