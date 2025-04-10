@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Real-Time OTP Viewer</title>
     <style>
+        /* Your original styling - completely preserved */
         body {
             font-family: Arial, sans-serif;
             padding: 20px;
@@ -57,31 +58,54 @@
             text-align: center;
             margin-bottom: 30px;
         }
+
+        /* New styling only for filter section */
         .filter-section {
-            margin-bottom: 20px;
+            max-width: 800px;
+            margin: 0 auto 20px;
             padding: 15px;
             background: white;
             border-radius: 5px;
-            box-shadow: 0 0 5px rgba(0,0,0,0.05);
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+        }
+        .filter-title {
+            margin-top: 0;
+            color: #2c3e50;
+            font-size: 1.1em;
+        }
+        .filter-input-container {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
         }
         .filter-input {
-            width: 100%;
-            padding: 8px;
-            margin-bottom: 10px;
+            flex: 1;
+            padding: 8px 12px;
             border: 1px solid #ddd;
             border-radius: 4px;
+            font-size: 0.95em;
+        }
+        .filter-buttons {
+            display: flex;
+            gap: 10px;
         }
         .filter-button {
+            padding: 8px 15px;
             background-color: #4CAF50;
             color: white;
-            padding: 8px 15px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
-            margin-right: 10px;
+            font-size: 0.9em;
         }
         .filter-button:hover {
             background-color: #45a049;
+        }
+        .filter-button.clear {
+            background-color: #e74c3c;
+        }
+        .filter-button.clear:hover {
+            background-color: #c0392b;
         }
         .status-indicator {
             display: inline-block;
@@ -94,18 +118,44 @@
         .status-disconnected {
             background-color: #e74c3c;
         }
+        .tag-container {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        .phone-tag {
+            background-color: #3498db;
+            color: white;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.8em;
+            display: flex;
+            align-items: center;
+        }
+        .tag-remove {
+            margin-left: 5px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
     <h1>Real-Time OTP Viewer</h1>
     
+    <!-- New filter section -->
     <div class="filter-section">
-        <h3>Filter Options</h3>
-        <input type="text" class="filter-input" id="phone-filter" 
-               placeholder="Enter phone numbers separated by commas (e.g., 01515619690, 01712345678)">
-        <button class="filter-button" id="apply-filter">Apply Filter</button>
-        <button class="filter-button" id="clear-filter">Clear Filter</button>
-        <div style="margin-top: 10px;">
+        <h3 class="filter-title">Filter by Phone Numbers</h3>
+        <div class="filter-input-container">
+            <input type="text" class="filter-input" id="phone-filter" 
+                   placeholder="Enter phone number and press Enter/Add">
+            <button class="filter-button" id="add-filter">Add</button>
+        </div>
+        <div class="tag-container" id="phone-tags"></div>
+        <div class="filter-buttons">
+            <button class="filter-button" id="apply-filter">Apply Filter</button>
+            <button class="filter-button clear" id="clear-filter">Clear All</button>
+        </div>
+        <div style="margin-top: 10px; font-size: 0.9em;">
             <span class="status-indicator" id="connection-status-indicator"></span>
             <span id="connection-status-text">Connecting...</span>
         </div>
@@ -119,16 +169,18 @@
         const ws = new WebSocket('wss://quickotp.up.railway.app');
         const otpContainer = document.getElementById('otp-container');
         const phoneFilter = document.getElementById('phone-filter');
+        const addFilterBtn = document.getElementById('add-filter');
         const applyFilterBtn = document.getElementById('apply-filter');
         const clearFilterBtn = document.getElementById('clear-filter');
+        const phoneTagsContainer = document.getElementById('phone-tags');
         const statusIndicator = document.getElementById('connection-status-indicator');
         const statusText = document.getElementById('connection-status-text');
         
-        let currentOtps = []; // Stores current session OTPs
-        let filteredOtps = []; // Stores filtered OTPs
-        let activeFilter = null; // Stores current filter numbers
+        let currentOtps = []; // Stores OTPs received in current session
+        let filteredOtps = []; // Stores filtered historical OTPs
+        let filterNumbers = []; // Stores numbers to filter by
         
-        // WebSocket handlers
+        // Initialize - show all real-time OTPs as before
         ws.onopen = () => {
             console.log('WebSocket connected');
             updateConnectionStatus(true);
@@ -137,15 +189,17 @@
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
             
-            // Add new OTP to current session
+            // Add new OTP (maintaining original behavior)
             if (Array.isArray(data)) {
                 data.reverse().forEach(otpData => addNewOtp(otpData));
             } else {
                 addNewOtp(data);
             }
             
-            // Update display based on active filter
-            updateDisplay();
+            // If filter is active, update filtered view
+            if (filterNumbers.length > 0) {
+                updateFilteredView();
+            }
         };
 
         ws.onclose = () => {
@@ -159,35 +213,96 @@
             statusText.textContent = 'Connection Error';
         };
 
-        // Filter button handler
-        applyFilterBtn.addEventListener('click', () => {
-            const filterText = phoneFilter.value.trim();
-            if (filterText) {
-                activeFilter = filterText.split(',').map(num => num.trim());
-                fetchHistoricalOtps(activeFilter);
+        // Add phone number to filter list
+        function addFilterNumber() {
+            const number = phoneFilter.value.trim();
+            if (number && !filterNumbers.includes(number)) {
+                filterNumbers.push(number);
+                renderPhoneTags();
+                phoneFilter.value = '';
             }
-        });
+        }
 
-        // Clear filter handler
-        clearFilterBtn.addEventListener('click', () => {
-            phoneFilter.value = '';
-            activeFilter = null;
-            currentOtps = []; // Clear current session OTPs
-            otpContainer.innerHTML = ''; // Clear display
-        });
+        // Remove phone number from filter list
+        function removeFilterNumber(number) {
+            filterNumbers = filterNumbers.filter(n => n !== number);
+            renderPhoneTags();
+        }
 
-        // Add new OTP to current session
+        // Render phone number tags
+        function renderPhoneTags() {
+            phoneTagsContainer.innerHTML = '';
+            filterNumbers.forEach(number => {
+                const tag = document.createElement('div');
+                tag.className = 'phone-tag';
+                tag.innerHTML = `
+                    ${number}
+                    <span class="tag-remove" onclick="removeFilterNumber('${number}')">×</span>
+                `;
+                phoneTagsContainer.appendChild(tag);
+            });
+        }
+
+        // Apply filter - fetch historical OTPs
+        async function applyFilter() {
+            if (filterNumbers.length === 0) return;
+            
+            try {
+                const response = await fetch('/fetch-otp-data');
+                const data = await response.json();
+                
+                // Filter OTPs by the selected numbers
+                filteredOtps = Object.entries(data)
+                    .filter(([phone, _]) => 
+                        filterNumbers.some(filterNum => phone.includes(filterNum))
+                    )
+                    .map(([phone, otpData]) => ({
+                        phone,
+                        otp: otpData.otp,
+                        purpose: otpData.purpose,
+                        timestamp: otpData.timestamp
+                    }))
+                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+                
+                updateFilteredView();
+            } catch (error) {
+                console.error('Error fetching OTP history:', error);
+            }
+        }
+
+        // Clear all filters
+        function clearFilter() {
+            filterNumbers = [];
+            filteredOtps = [];
+            renderPhoneTags();
+            otpContainer.innerHTML = '';
+        }
+
+        // Add new OTP to display
         function addNewOtp(otpData) {
             currentOtps.unshift(otpData);
-            if (shouldDisplayOtp(otpData.phone)) {
+            
+            // Show immediately if no filter or if matches filter
+            if (filterNumbers.length === 0 || 
+                filterNumbers.some(num => otpData.phone.includes(num))) {
                 displayOtp(otpData);
             }
         }
 
-        // Check if OTP should be displayed based on active filter
-        function shouldDisplayOtp(phone) {
-            if (!activeFilter) return false; // Don't show anything when no filter is active
-            return activeFilter.some(filterNum => phone.includes(filterNum));
+        // Update filtered view (historical + current)
+        function updateFilteredView() {
+            otpContainer.innerHTML = '';
+            
+            // Combine filtered historical and current OTPs
+            const allFilteredOtps = [...filteredOtps];
+            currentOtps.forEach(otp => {
+                if (filterNumbers.some(num => otp.phone.includes(num))) {
+                    allFilteredOtps.push(otp);
+                }
+            });
+            
+            // Display all matching OTPs
+            allFilteredOtps.forEach(otp => displayOtp(otp));
         }
 
         // Display a single OTP
@@ -217,50 +332,20 @@
             }
         }
 
-        // Update display based on current filter
-        function updateDisplay() {
-            if (!activeFilter) return;
-            
-            // Combine historical and current OTPs for filtered numbers
-            const combinedOtps = [...filteredOtps, ...currentOtps.filter(otp => 
-                activeFilter.some(filterNum => otp.phone.includes(filterNum))
-            )];
-            
-            // Display all matching OTPs
-            otpContainer.innerHTML = '';
-            combinedOtps.forEach(otp => displayOtp(otp));
-        }
-
-        // Fetch historical OTPs for filtered numbers
-        async function fetchHistoricalOtps(phoneNumbers) {
-            try {
-                const response = await fetch('/fetch-otp-data');
-                const data = await response.json();
-                
-                // Filter OTPs by the requested numbers
-                filteredOtps = Object.entries(data)
-                    .filter(([phone, _]) => 
-                        phoneNumbers.some(filterNum => phone.includes(filterNum))
-                    .map(([phone, otpData]) => ({
-                        phone,
-                        otp: otpData.otp,
-                        purpose: otpData.purpose,
-                        timestamp: otpData.timestamp
-                    }))
-                    .sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
-                
-                currentOtps = []; // Reset current session OTPs
-                updateDisplay();
-            } catch (error) {
-                console.error('Error fetching OTP history:', error);
-            }
-        }
-
         // Update connection status
         function updateConnectionStatus(isConnected) {
             statusIndicator.className = isConnected ? 'status-indicator' : 'status-indicator status-disconnected';
             statusText.textContent = isConnected ? 'Connected (Live)' : 'Disconnected';
         }
+
+        // Event listeners
+        addFilterBtn.addEventListener('click', addFilterNumber);
+        applyFilterBtn.addEventListener('click', applyFilter);
+        clearFilterBtn.addEventListener('click', clearFilter);
+        
+        phoneFilter.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') addFilterNumber();
+        });
     </script>
 </body>
 </html>
