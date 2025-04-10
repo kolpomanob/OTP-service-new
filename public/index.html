@@ -191,7 +191,7 @@
             
             // Add new OTP (maintaining original behavior)
             if (Array.isArray(data)) {
-                data.reverse().forEach(otpData => addNewOtp(otpData));
+                data.forEach(otpData => addNewOtp(otpData)); // Removed reverse()
             } else {
                 addNewOtp(data);
             }
@@ -255,7 +255,6 @@
                 filteredOtps = Object.entries(data)
                     .filter(([phone, _]) => 
                         filterNumbers.some(filterNum => phone.includes(filterNum))
-                    )
                     .map(([phone, otpData]) => ({
                         phone,
                         otp: otpData.otp,
@@ -276,16 +275,17 @@
             filteredOtps = [];
             renderPhoneTags();
             otpContainer.innerHTML = '';
+            currentOtps = []; // Clear current session OTPs when clearing filter
         }
 
         // Add new OTP to display
         function addNewOtp(otpData) {
-            currentOtps.unshift(otpData);
+            currentOtps.unshift(otpData); // Add to beginning of array
             
             // Show immediately if no filter or if matches filter
             if (filterNumbers.length === 0 || 
                 filterNumbers.some(num => otpData.phone.includes(num))) {
-                displayOtp(otpData);
+                displayOtp(otpData, true); // true = prepend
             }
         }
 
@@ -293,20 +293,20 @@
         function updateFilteredView() {
             otpContainer.innerHTML = '';
             
-            // Combine filtered historical and current OTPs
-            const allFilteredOtps = [...filteredOtps];
-            currentOtps.forEach(otp => {
-                if (filterNumbers.some(num => otp.phone.includes(num))) {
-                    allFilteredOtps.push(otp);
-                }
-            });
+            // Combine and sort - newest first
+            const allFilteredOtps = [
+                ...currentOtps.filter(otp => 
+                    filterNumbers.some(num => otp.phone.includes(num))
+                ),
+                ...filteredOtps
+            ].sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
             
-            // Display all matching OTPs
-            allFilteredOtps.forEach(otp => displayOtp(otp));
+            // Display all matching OTPs (newest first)
+            allFilteredOtps.forEach(otp => displayOtp(otp, false)); // false = append
         }
 
-        // Display a single OTP
-        function displayOtp({ phone, otp, purpose = 'unknown', timestamp }) {
+        // Display a single OTP (with position control)
+        function displayOtp({ phone, otp, purpose = 'unknown', timestamp }, prepend = true) {
             const otpBox = document.createElement('div');
             otpBox.className = 'otp-box';
             
@@ -324,8 +324,8 @@
                 </div>
             `;
             
-            // Add new OTP at the top
-            if (otpContainer.firstChild) {
+            // Add OTP at the top (prepend) or bottom (append)
+            if (prepend && otpContainer.firstChild) {
                 otpContainer.insertBefore(otpBox, otpContainer.firstChild);
             } else {
                 otpContainer.appendChild(otpBox);
