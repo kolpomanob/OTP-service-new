@@ -3,7 +3,7 @@ const { WebSocketServer } = require('ws');
 
 const app = express();
 
-// In-memory storage for OTPs (stores all OTPs but only shows latest when queried)
+// In-memory storage for OTPs
 const otpData = {};
 
 // WebSocket setup
@@ -22,25 +22,40 @@ wss.on('connection', (ws) => {
     });
 });
 
+// Helper function for Bangladesh time (UTC+6)
+function getBangladeshTime() {
+    const now = new Date();
+    // Add 6 hours for UTC+6 (Bangladesh has no daylight saving)
+    now.setHours(now.getHours() + 6);
+    
+    // Format as YYYY-MM-DD HH:mm:ss
+    return now.toISOString()
+        .replace('T', ' ')
+        .replace(/\..+/, '');
+}
+
 // Handle OTP submission or fetching
 app.get('/', (req, res) => {
     const phone = req.query.phone;
     const otp = req.query.otp;
     const purpose = req.query.purpose || 'unknown';
-    const timestamp = new Date().toISOString();
+    const timestamp = getBangladeshTime(); // Using Bangladesh time
 
     if (phone && otp) {
-        // Initialize array if first OTP for this number
-        if (!otpData[phone]) {
-            otpData[phone] = [];
-        }
+        // Save OTP in memory with timestamp and purpose
+        otpData[phone] = {
+            otp,
+            purpose,
+            timestamp
+        };
 
-        // Save OTP in memory
-        const otpRecord = { otp, purpose, timestamp };
-        otpData[phone].unshift(otpRecord); // Add new OTP at beginning
-
-        // Notify WebSocket clients
-        const message = JSON.stringify({ phone, otp, purpose, timestamp });
+        // Notify all WebSocket clients with full data
+        const message = JSON.stringify({ 
+            phone, 
+            otp, 
+            purpose,
+            timestamp 
+        });
         clients.forEach((ws) => ws.send(message));
 
         return res.status(200).json({
@@ -51,15 +66,14 @@ app.get('/', (req, res) => {
     }
 
     if (phone && !otp) {
-        // Return only the latest OTP for this number
-        const otpRecords = otpData[phone];
-        if (otpRecords && otpRecords.length > 0) {
-            const latest = otpRecords[0]; // Get most recent OTP
+        // Fetch the latest OTP for the given phone number
+        const otpRecord = otpData[phone];
+        if (otpRecord) {
             return res.status(200).json({
                 phone,
-                otp: latest.otp,
-                purpose: latest.purpose,
-                timestamp: latest.timestamp
+                otp: otpRecord.otp,
+                purpose: otpRecord.purpose,
+                timestamp: otpRecord.timestamp
             });
         } else {
             return res.status(404).json({
@@ -69,7 +83,7 @@ app.get('/', (req, res) => {
         }
     }
 
-    // Serve frontend
+    // Serve frontend if no query parameters are provided
     if (!phone && !otp) {
         res.sendFile(__dirname + '/public/index.html');
     } else {
@@ -80,12 +94,12 @@ app.get('/', (req, res) => {
     }
 });
 
-// Fetch all OTP data (returns complete history for all numbers)
+// Fetch all OTP data for debugging purposes
 app.get('/fetch-otp-data', (req, res) => {
     res.json(otpData);
 });
 
-// Start server
+// Start server and WebSocket
 const server = app.listen(process.env.PORT || 3000, () => {
     console.log(`Server running on port ${process.env.PORT || 3000}`);
 });
