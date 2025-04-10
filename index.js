@@ -3,7 +3,7 @@ const { WebSocketServer } = require('ws');
 
 const app = express();
 
-// In-memory storage for OTPs
+// In-memory storage for OTPs (now with timestamp)
 const otpData = {};
 
 // WebSocket setup
@@ -26,28 +26,42 @@ wss.on('connection', (ws) => {
 app.get('/', (req, res) => {
     const phone = req.query.phone;
     const otp = req.query.otp;
+    const purpose = req.query.purpose || 'unknown'; // Default purpose if not provided
+    const timestamp = new Date().toISOString(); // Get current timestamp
 
     if (phone && otp) {
-        // Save OTP in memory
-        otpData[phone] = otp;
+        // Save OTP in memory with timestamp and purpose
+        otpData[phone] = {
+            otp,
+            purpose,
+            timestamp
+        };
 
-        // Notify all WebSocket clients
-        const message = JSON.stringify({ phone, otp });
+        // Notify all WebSocket clients with full data
+        const message = JSON.stringify({ 
+            phone, 
+            otp, 
+            purpose,
+            timestamp 
+        });
         clients.forEach((ws) => ws.send(message));
 
         return res.status(200).json({
-            message: `OTP ${otp} received for phone ${phone}`,
+            message: `OTP ${otp} received for phone ${phone} (purpose: ${purpose})`,
             status: 'success',
+            timestamp
         });
     }
 
     if (phone && !otp) {
-        // Fetch the latest OTP for the given phone number
-        const latestOtp = otpData[phone];
-        if (latestOtp) {
+        // Fetch the latest OTP data for the given phone number
+        const otpRecord = otpData[phone];
+        if (otpRecord) {
             return res.status(200).json({
                 phone,
-                otp: latestOtp,
+                otp: otpRecord.otp,
+                purpose: otpRecord.purpose,
+                timestamp: otpRecord.timestamp
             });
         } else {
             return res.status(404).json({

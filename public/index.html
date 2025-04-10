@@ -11,7 +11,7 @@
             background-color: #f4f4f4;
         }
         #otp-container {
-            max-width: 600px;
+            max-width: 800px;
             margin: auto;
             padding: 20px;
             background: #fff;
@@ -19,19 +19,54 @@
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
         .otp-box {
-            margin-bottom: 10px;
-            padding: 10px;
+            margin-bottom: 15px;
+            padding: 15px;
             background: #e9ecef;
+            border-radius: 5px;
+            border-left: 4px solid #4CAF50;
+        }
+        .otp-header {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            font-weight: bold;
+        }
+        .otp-phone {
+            color: #2c3e50;
+            font-size: 1.1em;
+        }
+        .otp-time {
+            color: #7f8c8d;
+            font-size: 0.9em;
+        }
+        .otp-code {
+            font-size: 1.2em;
+            color: #e74c3c;
+            margin: 5px 0;
+        }
+        .otp-purpose {
+            display: inline-block;
+            padding: 3px 8px;
+            background: #3498db;
+            color: white;
             border-radius: 3px;
+            font-size: 0.8em;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
         }
     </style>
 </head>
 <body>
     <h1>Real-Time OTP Viewer</h1>
-    <div id="otp-container"></div>
+    <div id="otp-container">
+        <!-- OTP entries will appear here -->
+    </div>
 
     <script>
-        const ws = new WebSocket('wss://otp-service-production.up.railway.app'); // WebSocket connection
+        const ws = new WebSocket('wss://otp-service-production.up.railway.app');
 
         ws.onopen = () => {
             console.log('WebSocket connected');
@@ -39,10 +74,10 @@
 
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
-
-            // Check if it's a batch of OTPs or a single OTP
+            
+            // Handle both single OTP and batch of OTPs
             if (Array.isArray(data)) {
-                data.forEach(addOtpToPage);
+                data.reverse().forEach(otpData => addOtpToPage(otpData));
             } else {
                 addOtpToPage(data);
             }
@@ -52,12 +87,31 @@
             console.log('WebSocket connection closed');
         };
 
-        function addOtpToPage({ phone, otp }) {
+        function addOtpToPage({ phone, otp, purpose = 'unknown', timestamp }) {
             const container = document.getElementById('otp-container');
             const otpBox = document.createElement('div');
             otpBox.className = 'otp-box';
-            otpBox.textContent = `Phone: ${phone}, OTP: ${otp}`;
-            container.appendChild(otpBox);
+            
+            // Format timestamp for display
+            const formattedTime = timestamp ? new Date(timestamp).toLocaleString() : 'Just now';
+            
+            otpBox.innerHTML = `
+                <div class="otp-header">
+                    <span class="otp-phone">${phone}</span>
+                    <span class="otp-time">${formattedTime}</span>
+                </div>
+                <div class="otp-code">OTP: ${otp}</div>
+                <div>
+                    <span class="otp-purpose">${purpose}</span>
+                </div>
+            `;
+            
+            // Add new OTP at the top of the container
+            if (container.firstChild) {
+                container.insertBefore(otpBox, container.firstChild);
+            } else {
+                container.appendChild(otpBox);
+            }
         }
     </script>
 </body>
