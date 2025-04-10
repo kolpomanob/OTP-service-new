@@ -3,79 +3,208 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Real-Time OTP Viewer</title>
+    <title>Real-Time OTP Dashboard</title>
     <style>
+        :root {
+            --primary: #4361ee;
+            --secondary: #3f37c9;
+            --success: #4cc9f0;
+            --danger: #f72585;
+            --light: #f8f9fa;
+            --dark: #212529;
+            --gray: #6c757d;
+        }
+        
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f5f7fa;
+            margin: 0;
             padding: 20px;
-            background-color: #f4f4f4;
+            color: var(--dark);
         }
+        
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        h1 {
+            color: var(--primary);
+            margin-bottom: 10px;
+            font-weight: 600;
+        }
+        
+        .subtitle {
+            color: var(--gray);
+            font-size: 1.1rem;
+        }
+        
         #otp-container {
-            max-width: 800px;
-            margin: auto;
-            padding: 20px;
-            background: #fff;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+            overflow: hidden;
         }
+        
         .otp-box {
-            margin-bottom: 15px;
-            padding: 15px;
-            background: #e9ecef;
-            border-radius: 5px;
-            border-left: 4px solid #4CAF50;
+            padding: 18px 25px;
+            border-bottom: 1px solid #f0f0f0;
+            transition: all 0.3s ease;
         }
+        
+        .otp-box:hover {
+            background-color: #f8f9fa;
+        }
+        
         .otp-header {
             display: flex;
             justify-content: space-between;
+            align-items: center;
             margin-bottom: 8px;
-            font-weight: bold;
         }
-        .otp-phone {
-            color: #2c3e50;
-            font-size: 1.1em;
+        
+        .phone-number {
+            font-weight: 600;
+            color: var(--primary);
+            font-size: 1.1rem;
         }
-        .otp-time {
-            color: #7f8c8d;
-            font-size: 0.9em;
+        
+        .timestamp {
+            color: var(--gray);
+            font-size: 0.85rem;
+            background: #f8f9fa;
+            padding: 4px 8px;
+            border-radius: 12px;
         }
+        
+        .otp-content {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        
         .otp-code {
-            font-size: 1.2em;
-            color: #e74c3c;
-            margin: 5px 0;
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--danger);
+            letter-spacing: 2px;
         }
-        .otp-purpose {
-            display: inline-block;
-            padding: 3px 8px;
-            background: #3498db;
+        
+        .purpose-badge {
+            padding: 4px 12px;
+            border-radius: 16px;
+            font-size: 0.8rem;
+            font-weight: 500;
+            text-transform: uppercase;
+            background-color: var(--success);
             color: white;
-            border-radius: 3px;
-            font-size: 0.8em;
         }
-        h1 {
-            color: #2c3e50;
-            text-align: center;
-            margin-bottom: 30px;
+        
+        /* Different colors for different purposes */
+        .purpose-login { background-color: #4cc9f0; }
+        .purpose-signup { background-color: #4895ef; }
+        .purpose-verification { background-color: #4361ee; }
+        .purpose-reset { background-color: #3f37c9; }
+        .purpose-unknown { background-color: #b5179e; }
+        
+        /* Animation for new entries */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        .new-otp {
+            animation: fadeIn 0.5s ease-out;
+            background-color: rgba(76, 201, 240, 0.05);
+        }
+        
+        /* Status bar */
+        .status-bar {
+            padding: 12px 20px;
+            background-color: var(--primary);
+            color: white;
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+        }
+        
+        .connection-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .connection-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: #4ade80;
+        }
+        
+        .disconnected {
+            background-color: var(--danger);
+        }
+        
+        /* Responsive design */
+        @media (max-width: 768px) {
+            .otp-header {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 5px;
+            }
+            
+            .otp-content {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 8px;
+            }
         }
     </style>
 </head>
 <body>
-    <h1>Real-Time OTP Viewer</h1>
-    <div id="otp-container">
-        <!-- OTP entries will appear here -->
+    <div class="container">
+        <header>
+            <h1>OTP Monitoring Dashboard</h1>
+            <p class="subtitle">Real-time one-time password tracking</p>
+        </header>
+        
+        <div id="otp-container">
+            <div class="status-bar">
+                <div class="connection-status">
+                    <div class="connection-dot" id="connection-dot"></div>
+                    <span id="connection-status">Connecting...</span>
+                </div>
+                <div id="message-count">0 messages received</div>
+            </div>
+            <!-- OTP entries will appear here -->
+        </div>
     </div>
 
     <script>
         const ws = new WebSocket('wss://quickotp.up.railway.app');
+        let messageCount = 0;
+        const connectionDot = document.getElementById('connection-dot');
+        const connectionStatus = document.getElementById('connection-status');
+        const messageCountElement = document.getElementById('message-count');
 
         ws.onopen = () => {
             console.log('WebSocket connected');
+            connectionDot.classList.remove('disconnected');
+            connectionStatus.textContent = 'Connected (Live)';
         };
 
         ws.onmessage = (event) => {
             const data = JSON.parse(event.data);
+            messageCount++;
+            messageCountElement.textContent = `${messageCount} messages received`;
             
-            // Handle both single OTP and batch of OTPs
             if (Array.isArray(data)) {
                 data.reverse().forEach(otpData => addOtpToPage(otpData));
             } else {
@@ -85,30 +214,46 @@
 
         ws.onclose = () => {
             console.log('WebSocket connection closed');
+            connectionDot.classList.add('disconnected');
+            connectionStatus.textContent = 'Disconnected';
+        };
+
+        ws.onerror = (error) => {
+            console.error('WebSocket error:', error);
+            connectionDot.classList.add('disconnected');
+            connectionStatus.textContent = 'Connection Error';
         };
 
         function addOtpToPage({ phone, otp, purpose = 'unknown', timestamp }) {
             const container = document.getElementById('otp-container');
             const otpBox = document.createElement('div');
-            otpBox.className = 'otp-box';
+            otpBox.className = 'otp-box new-otp';
             
-            // Format timestamp for display
+            // Remove animation class after it completes
+            setTimeout(() => {
+                otpBox.classList.remove('new-otp');
+            }, 500);
+            
+            // Format timestamp
             const formattedTime = timestamp ? new Date(timestamp).toLocaleString() : 'Just now';
+            
+            // Determine purpose class
+            const purposeClass = purpose ? `purpose-${purpose.toLowerCase()}` : 'purpose-unknown';
             
             otpBox.innerHTML = `
                 <div class="otp-header">
-                    <span class="otp-phone">${phone}</span>
-                    <span class="otp-time">${formattedTime}</span>
+                    <span class="phone-number">${phone}</span>
+                    <span class="timestamp">${formattedTime}</span>
                 </div>
-                <div class="otp-code">OTP: ${otp}</div>
-                <div>
-                    <span class="otp-purpose">${purpose}</span>
+                <div class="otp-content">
+                    <span class="otp-code">${otp}</span>
+                    <span class="purpose-badge ${purposeClass}">${purpose}</span>
                 </div>
             `;
             
-            // Add new OTP at the top of the container
-            if (container.firstChild) {
-                container.insertBefore(otpBox, container.firstChild);
+            // Add new OTP at the top (after status bar)
+            if (container.children.length > 1) {
+                container.insertBefore(otpBox, container.children[1]);
             } else {
                 container.appendChild(otpBox);
             }
