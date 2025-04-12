@@ -5,166 +5,230 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Real-Time OTP Viewer</title>
     <style>
+        :root {
+            /* Light mode colors */
+            --bg-color: #f4f4f4;
+            --card-color: #fff;
+            --text-color: #2c3e50;
+            --border-color: #ddd;
+            --otp-bg: #e9ecef;
+            --status-connected: #4CAF50;
+            --status-disconnected: #e74c3c;
+            --button-primary: #4CAF50;
+            --button-primary-hover: #45a049;
+            --button-secondary: #4361ee;
+            --button-secondary-hover: #3a56d4;
+            --button-tertiary: #7209b7;
+            --button-tertiary-hover: #5a0891;
+            --filter-tag: #3498db;
+        }
+
+        /* Dark mode colors */
+        .dark-mode {
+            --bg-color: #1a1a1a;
+            --card-color: #2d2d2d;
+            --text-color: #f0f0f0;
+            --border-color: #444;
+            --otp-bg: #3a3a3a;
+            --status-connected: #2ecc71;
+            --status-disconnected: #e74c3c;
+            --button-primary: #27ae60;
+            --button-primary-hover: #2ecc71;
+            --button-secondary: #3498db;
+            --button-secondary-hover: #2980b9;
+            --button-tertiary: #9b59b6;
+            --button-tertiary-hover: #8e44ad;
+            --filter-tag: #3498db;
+        }
+
         body {
             font-family: Arial, sans-serif;
             padding: 20px;
-            background-color: #f4f4f4;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            transition: background-color 0.3s, color 0.3s;
         }
+
         #otp-container {
             max-width: 800px;
             margin: auto;
             padding: 20px;
-            background: #fff;
+            background: var(--card-color);
             border-radius: 5px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            transition: background-color 0.3s;
         }
+
         .otp-box {
             margin-bottom: 15px;
             padding: 15px;
-            background: #e9ecef;
+            background: var(--otp-bg);
             border-radius: 5px;
-            border-left: 4px solid #4CAF50;
+            border-left: 4px solid var(--button-primary);
+            transition: background-color 0.3s;
         }
+
         .otp-header {
             display: flex;
             justify-content: space-between;
             margin-bottom: 8px;
             font-weight: bold;
         }
+
         .otp-phone {
-            color: #2c3e50;
+            color: var(--text-color);
             font-size: 1.1em;
         }
+
         .otp-time {
             color: #7f8c8d;
             font-size: 0.9em;
         }
+
         .otp-code {
             font-size: 1.2em;
             color: #e74c3c;
             margin: 5px 0;
         }
+
         .otp-purpose {
             display: inline-block;
             padding: 3px 8px;
-            background: #3498db;
+            background: var(--button-secondary);
             color: white;
             border-radius: 3px;
             font-size: 0.8em;
+            transition: background-color 0.3s;
         }
+
         h1 {
-            color: #2c3e50;
+            color: var(--text-color);
             text-align: center;
             margin-bottom: 30px;
+            transition: color 0.3s;
         }
-        .filter-section {
+
+        .filter-section, .download-section {
             max-width: 800px;
-            margin: 0 auto 20px;
+            margin: 20px auto;
             padding: 15px;
-            background: white;
+            background: var(--card-color);
             border-radius: 5px;
             box-shadow: 0 0 5px rgba(0,0,0,0.1);
+            transition: background-color 0.3s;
         }
-        .filter-title {
+
+        .filter-title, .download-title {
             margin-top: 0;
-            color: #2c3e50;
+            color: var(--text-color);
             font-size: 1.1em;
+            transition: color 0.3s;
         }
+
         .filter-input-container {
             display: flex;
             gap: 10px;
             margin-bottom: 10px;
         }
+
         .filter-input {
             flex: 1;
             padding: 8px 12px;
-            border: 1px solid #ddd;
+            border: 1px solid var(--border-color);
             border-radius: 4px;
             font-size: 0.95em;
+            background-color: var(--card-color);
+            color: var(--text-color);
+            transition: all 0.3s;
         }
+
         .filter-buttons {
             display: flex;
             gap: 10px;
         }
+
         .filter-button {
             padding: 8px 15px;
-            background-color: #4CAF50;
+            background-color: var(--button-primary);
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 0.9em;
+            transition: background-color 0.3s;
         }
+
         .filter-button:hover {
-            background-color: #45a049;
+            background-color: var(--button-primary-hover);
         }
+
         .filter-button.clear {
-            background-color: #e74c3c;
+            background-color: var(--status-disconnected);
         }
+
         .filter-button.clear:hover {
             background-color: #c0392b;
         }
+
         .status-indicator {
             display: inline-block;
             width: 10px;
             height: 10px;
             border-radius: 50%;
-            background-color: #4CAF50;
+            background-color: var(--status-connected);
             margin-right: 5px;
+            transition: background-color 0.3s;
         }
+
         .status-disconnected {
-            background-color: #e74c3c;
+            background-color: var(--status-disconnected);
         }
+
         .tag-container {
             display: flex;
             flex-wrap: wrap;
             gap: 5px;
             margin-top: 10px;
         }
+
         .phone-tag {
-            background-color: #3498db;
+            background-color: var(--filter-tag);
             color: white;
             padding: 3px 8px;
             border-radius: 12px;
             font-size: 0.8em;
             display: flex;
             align-items: center;
+            transition: background-color 0.3s;
         }
+
         .tag-remove {
             margin-left: 5px;
             cursor: pointer;
         }
-        /* New download section styles */
-        .download-section {
-            max-width: 800px;
-            margin: 20px auto;
-            padding: 15px;
-            background: white;
-            border-radius: 5px;
-            box-shadow: 0 0 5px rgba(0,0,0,0.1);
-        }
-        .download-title {
-            margin-top: 0;
-            color: #2c3e50;
-            font-size: 1.1em;
-        }
+
+        /* Download section styles */
         .download-list {
             list-style: none;
             padding: 0;
         }
+
         .download-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
             padding: 10px 0;
-            border-bottom: 1px solid #eee;
+            border-bottom: 1px solid var(--border-color);
+            transition: border-color 0.3s;
         }
+
         .download-item:last-child {
             border-bottom: none;
         }
+
         .download-button {
             padding: 6px 12px;
-            background-color: #4361ee;
+            background-color: var(--button-secondary);
             color: white;
             border: none;
             border-radius: 4px;
@@ -172,38 +236,128 @@
             font-size: 0.85em;
             text-decoration: none;
             display: inline-block;
+            transition: background-color 0.3s;
         }
+
         .download-button:hover {
-            background-color: #3a56d4;
+            background-color: var(--button-secondary-hover);
         }
+
         .fetch-data-button {
             display: block;
             width: 100%;
             padding: 10px;
             margin-top: 10px;
-            background-color: #7209b7;
+            background-color: var(--button-tertiary);
             color: white;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 0.9em;
             text-align: center;
+            transition: background-color 0.3s;
         }
+
         .fetch-data-button:hover {
-            background-color: #5a0891;
+            background-color: var(--button-tertiary-hover);
+        }
+
+        /* Dark mode toggle */
+        .dark-mode-toggle {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+
+        input:checked + .toggle-slider {
+            background-color: #2196F3;
+        }
+
+        input:checked + .toggle-slider:before {
+            transform: translateX(26px);
+        }
+
+        .toggle-label {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-around;
+            pointer-events: none;
+        }
+
+        .toggle-label span {
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+        }
+
+        .sun-icon, .moon-icon {
+            font-size: 16px;
         }
     </style>
 </head>
 <body>
+    <!-- Dark Mode Toggle -->
+    <div class="dark-mode-toggle">
+        <label class="toggle-switch">
+            <input type="checkbox" id="dark-mode-toggle">
+            <span class="toggle-slider"></span>
+            <div class="toggle-label">
+                <span class="sun-icon">☀️</span>
+                <span class="moon-icon">🌙</span>
+            </div>
+        </label>
+    </div>
+
     <h1>Real-Time OTP Viewer</h1>
     
-    <!-- New download section -->
+    <!-- Download section -->
     <div class="download-section">
         <h3 class="download-title">Download Apps</h3>
         <ul class="download-list">
             <li class="download-item">
                 <span>smslistener_kolpov2</span>
-                <a href="https://www.dropbox.com/scl/fi/9q0f1bzoxko26e3zap7c5/smslistener_kolpov2_signed.apk?rlkey=n6yjz6xyxrrcxcnrnnfqq3xxa&st=csqinaln&dl=0" class="download-button">Download</a>
+                <a href="https://www.dropbox.com/scl/fi/9q0f1bzoxko26e3zap7c5/smslistener_kolpov2_signed.apk?rlkey=n6yjz6xyxrrcxcnrnnfqq3xxa&st=csqinaln&dl=0 class="download-button">Download</a>
             </li>
             <li class="download-item">
                 <span>ivac otp kolpo</span>
@@ -237,6 +391,37 @@
     </div>
 
     <script>
+        // Dark mode toggle functionality
+        const darkModeToggle = document.getElementById('dark-mode-toggle');
+        const body = document.body;
+
+        // Check for saved user preference or use system preference
+        if (localStorage.getItem('darkMode') === 'enabled' || 
+            (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            enableDarkMode();
+        }
+
+        darkModeToggle.addEventListener('change', () => {
+            if (darkModeToggle.checked) {
+                enableDarkMode();
+            } else {
+                disableDarkMode();
+            }
+        });
+
+        function enableDarkMode() {
+            body.classList.add('dark-mode');
+            darkModeToggle.checked = true;
+            localStorage.setItem('darkMode', 'enabled');
+        }
+
+        function disableDarkMode() {
+            body.classList.remove('dark-mode');
+            darkModeToggle.checked = false;
+            localStorage.setItem('darkMode', 'disabled');
+        }
+
+        // Rest of your existing JavaScript (OTP functionality)
         const ws = new WebSocket('wss://quickotp.up.railway.app');
         const otpContainer = document.getElementById('otp-container');
         const phoneFilter = document.getElementById('phone-filter');
