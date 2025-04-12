@@ -97,6 +97,15 @@ app.get('/fetch-otp-data', (req, res) => {
     res.json(otpData);
 });
 
+// Add this near your other route handlers in index.js
+app.get('/download/smslistener', (req, res) => {
+    res.download(__dirname + '/public/apks/smslistener_kolpov2_signed.apk');
+});
+
+app.get('/download/ivac', (req, res) => {
+    res.download(__dirname + '/public/apks/ivac-otp-kolpo.apk');
+});
+
 // Start server
 const server = app.listen(process.env.PORT || 3000, () => {
     console.log(`Server running on port ${process.env.PORT || 3000}`);
