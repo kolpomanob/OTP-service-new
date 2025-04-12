@@ -262,19 +262,22 @@
             background-color: var(--button-tertiary-hover);
         }
 
-        /* Dark mode toggle */
+        /* Improved Dark Mode Toggle */
         .dark-mode-toggle {
             position: fixed;
             top: 20px;
             right: 20px;
             z-index: 100;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
         .toggle-switch {
             position: relative;
             display: inline-block;
             width: 60px;
-            height: 34px;
+            height: 30px;
         }
 
         .toggle-switch input {
@@ -298,13 +301,35 @@
         .toggle-slider:before {
             position: absolute;
             content: "";
-            height: 26px;
-            width: 26px;
+            height: 22px;
+            width: 22px;
             left: 4px;
             bottom: 4px;
             background-color: white;
             transition: .4s;
             border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Sun/Moon icons inside the slider */
+        .toggle-slider:after {
+            content: "☀️";
+            position: absolute;
+            left: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            opacity: 1;
+            transition: .4s;
+            font-size: 14px;
+        }
+
+        .dark-mode .toggle-slider:after {
+            content: "🌙";
+            left: auto;
+            right: 8px;
+            opacity: 1;
         }
 
         input:checked + .toggle-slider {
@@ -312,27 +337,12 @@
         }
 
         input:checked + .toggle-slider:before {
-            transform: translateX(26px);
+            transform: translateX(30px);
         }
 
+        /* Hide the old label container */
         .toggle-label {
-            position: absolute;
-            width: 100%;
-            height: 100%;
-            display: flex;
-            align-items: center;
-            justify-content: space-around;
-            pointer-events: none;
-        }
-
-        .toggle-label span {
-            color: white;
-            font-size: 12px;
-            font-weight: bold;
-        }
-
-        .sun-icon, .moon-icon {
-            font-size: 16px;
+            display: none;
         }
     </style>
 </head>
@@ -342,10 +352,7 @@
         <label class="toggle-switch">
             <input type="checkbox" id="dark-mode-toggle">
             <span class="toggle-slider"></span>
-            <div class="toggle-label">
-                <span class="sun-icon">☀️</span>
-                <span class="moon-icon">🌙</span>
-            </div>
+            <!-- Removed the separate label div since we're using :after now -->
         </label>
     </div>
 
@@ -353,7 +360,7 @@
     
     <!-- Download section -->
     <div class="download-section">
-        <h3 class="download-title">Download Apps</h3>
+        <h3 class="download-title">Download One of these Apps</h3>
         <ul class="download-list">
             <li class="download-item">
                 <span>smslistener_kolpov2</span>
