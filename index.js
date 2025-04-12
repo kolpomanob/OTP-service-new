@@ -103,7 +103,7 @@ app.get('/download/smslistener', (req, res) => {
 });
 
 app.get('/download/ivac', (req, res) => {
-    res.download(__dirname + '/public/apks/ivac-otp-kolpo.apk');
+    res.download(__dirname + '/public/apks/ivac_otp_kolpo.apk');
 });
 
 // Start server
